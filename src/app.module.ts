@@ -6,10 +6,11 @@ import { ConfigModule } from "@nestjs/config"
 import { ServersGateway } from './servers/servers.gateway';
 import { UsersModule } from './users/users.module';
 import { UsersService } from './users/users.service';
+import { ChannelService } from './servers/channel.service';
 
 @Module({
   imports: [ConnectdbModule, ConfigModule.forRoot(), UsersModule],
   controllers: [AppController],
-  providers: [AppService, UsersService, ServersGateway],
+  providers: [AppService, UsersService, ChannelService, ServersGateway],
 })
 export class AppModule {}

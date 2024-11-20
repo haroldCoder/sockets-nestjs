@@ -1,29 +1,39 @@
-import { Inject } from '@nestjs/common';
 import { MessageBody, OnGatewayConnection, SubscribeMessage, WebSocketGateway, WebSocketServer, OnGatewayDisconnect, ConnectedSocket } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChannelService } from './channel.service';
 import { Users } from 'src/interfaces/users';
 import { UsersService } from 'src/users/users.service';
-import { Pool } from 'mysql2/promise';
 
-@WebSocketGateway(1800, {transports: ['websocket']})
+@WebSocketGateway({transports: ['websocket'], cors: { origin: '*' }})
 export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private users: Set<Socket> = new Set();
-  channelService: ChannelService
+  private players: Map<string, { id: string; x: number; y: number }> = new Map();
 
-  constructor(private readonly usersService: UsersService){
-    this.channelService = new ChannelService();
+
+  constructor(private readonly usersService: UsersService, private readonly channelService: ChannelService){
   }
 
-  handleConnection(client: Socket) {
+  handleConnection(@ConnectedSocket() client: Socket) {
       console.log(`user connected: ${client.handshake.address} ${client.handshake.url}`);
       this.users.add(client);
+      const newPlayer = {
+        id: client.id,
+        x: 400,
+        y: 300,
+      };
+  
+      this.players.set(client.id, newPlayer);
+
+      client.emit('current-players', Array.from(this.players.values()));
   }
 
   handleDisconnect(client: Socket){
     console.log(`user disconnected: ${client.handshake.address} ${client.handshake.url}`);
     this.users.delete(client);
+    this.players.delete(client.id);
+
+    this.server.emit('current-players', Array.from(this.players.values()));
   }
 
   getUsersConnecteds(): Array<string>{
@@ -52,6 +62,19 @@ export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect 
     else{
       client.emit("login", "an ocurred error")
       return "an ocurred error"
+    }
+  }
+
+  @SubscribeMessage('player-move')
+  handlePlayerMove(
+    @MessageBody() position: { x: number; y: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const player = this.players.get(client.id);
+    
+    if (player) {
+      this.players.set(client.id, {id: client.id, x: position.x, y: position.y})
+      this.server.emit('current-players', Array.from(this.players.values()));
     }
   }
 }
