@@ -108,6 +108,7 @@ const App = () => {
 
       socket.on("current-players", (players: Array<{ id: string, x: number, y: number }>) => {
         dispatch(setPlayers(players));
+        initializeGame(players);
       });
 
       return () => {
