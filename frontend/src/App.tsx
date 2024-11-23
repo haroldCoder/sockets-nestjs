@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { connectSocket, disconnectSocket, playerMove, setConnected, setSocketId, setPlayers } from "./redux/socketSlice";
+import { connectSocket, disconnectSocket, setConnected, setSocketId, setPlayers } from "./redux/socketSlice";
 import Phaser from "phaser"
+import { updatePlayers } from "./utils/UpdatePlayers";
+import { initializeGame } from "./utils/InicializeGame";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -11,81 +13,7 @@ const App = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const [prevPlayersCount, setPrevPlayersCount] = useState(0);
 
-  const initializeGame = (players: Array<{ id: string, x: number, y: number }>) => {
-    if (gameRef.current) {
-      gameRef.current.destroy(true);
-      gameRef.current = null;
-    }
-
-    const config: Phaser.Types.Core.GameConfig = {
-      type: Phaser.AUTO,
-      width: 800,
-      height: 600,
-      parent: "phaser-game",
-      scene: {
-        preload: function (this: Phaser.Scene) {
-          this.load.image("dude", "https://labs.phaser.io/assets/sprites/phaser-dude.png");
-        },
-        create: function (this: Phaser.Scene) {
-          this.add.rectangle(400, 300, 800, 600, 0xaaaaaa);
-
-          players.forEach((player) => {
-            this.add.sprite(player.x, player.y, "dude").setName(player.id);
-          });
-        },
-        init: function (this: Phaser.Scene) {
-          const playerState = {
-            moving: false
-          }
-
-          this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-            const player = this.children.getByName(id.current) as Phaser.GameObjects.Sprite;
-        
-            if (!player) return;
-            let moved = false;
-        
-            switch (event.key) {
-              case 'ArrowLeft':
-                player.x -= 5;
-                moved = true;
-                break;
-              case 'ArrowRight':
-                player.x += 5;
-                moved = true;
-                break;
-              case 'ArrowUp':
-                player.y -= 5;
-                moved = true;
-                break;
-              case 'ArrowDown':
-                player.y += 5;
-                moved = true;
-                break;
-            }
-        
-            if (moved && !playerState.moving) {
-              player.setPosition(player.x, player.y);
-        
-              if (connected) {
-                dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
-              }
-        
-              playerState.moving = true;
-            }
-          });
-        
-          this.input.keyboard?.on('keyup', () => {
-            playerState.moving = false;
-          });
-        },
-      },
-    };
-
-    gameRef.current = new Phaser.Game(config);
-  };
-
   useEffect(() => {
-
     if (connected) {
       socket.on("connect", () => {
         setConnected(true);
@@ -108,7 +36,12 @@ const App = () => {
 
       socket.on("current-players", (players: Array<{ id: string, x: number, y: number }>) => {
         dispatch(setPlayers(players));
-        initializeGame(players);
+        if (gameRef.current) {
+          const scene = gameRef.current.scene.getAt(0) as Phaser.Scene;
+          if (scene) {
+            updatePlayers(scene, players);
+          }
+        }
       });
 
       return () => {
@@ -120,7 +53,7 @@ const App = () => {
 
   useEffect(() => {
     if (players.length > prevPlayersCount) {
-      initializeGame(players);
+      initializeGame(players, gameRef, dispatch, id);
     }
     setPrevPlayersCount(players.length);
   }, [players]);
