@@ -7,8 +7,6 @@ const useSocket = () => {
   const [socket, setSocket] = useState<Socket>();
   const [message, setMessage] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [users, setUsers] = useState<{ id: string; x: number; y: number }[]>([]);
-
 
 
   useEffect(() => {
