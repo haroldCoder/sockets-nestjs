@@ -1,15 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool, RowDataPacket } from 'mysql2/promise';
-import { Users } from 'src/interfaces/users';
+import { FieldPacket, Pool, RowDataPacket } from 'mysql2/promise';
+import { User } from '../domain/user.entity';
 import { UserRepository } from '../domain/user.repository';
+import { userLogin } from '../domain/user-login.entity';
 
 @Injectable()
 export class MysqlUserRepository implements UserRepository {
-  constructor(@Inject('DATABASE_CONNECTION') private readonly pool: Pool) {}
+  constructor(@Inject('DATABASE_CONNECTION') private readonly pool: Pool) { }
 
-  async findByUsername(username: string): Promise<Users | null> {
+  async findByUsername(username: string): Promise<User | null> {
     const [rows] = await this.pool.query<RowDataPacket[]>(
-      'SELECT * FROM users WHERE username = ?',
+      'SELECT * FROM Users WHERE username = ?',
       [username],
     );
 
@@ -17,15 +18,39 @@ export class MysqlUserRepository implements UserRepository {
       return null;
     }
 
-    return rows[0] as Users;
+    return rows[0] as User;
   }
 
-  async save(user: Users): Promise<Users> {
-    const { username, password, id, ip } = user;
-    await this.pool.query(
-      'INSERT INTO users(username, password, id, ip) VALUES(?, ?, ?, ?)',
-      [username, password, id, ip],
-    );
-    return user;
+  async RegisterUser(user: User): Promise<boolean> {
+    try {
+      const { username, password, id, ip } = user;
+      await this.pool.query(
+        'INSERT INTO Users(username, password, id, ip) VALUES(?, ?, ?, ?)',
+        [username, password, id, ip],
+      );
+      return true;
+    }
+    catch (err) {
+      console.log(err);
+      return false;
+    }
+
+  }
+
+  async LoginUser(user: User): Promise<boolean> {
+    try {
+      const [rows, fields]: [RowDataPacket[], FieldPacket[]] =
+        await this.pool.query(
+          `SELECT * FROM Users WHERE username = "${user.username}" AND password = "${user.password}"`,
+        );
+      if (rows.length > 0) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
   }
 }

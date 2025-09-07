@@ -1,8 +1,10 @@
-import { Users } from 'src/interfaces/users';
+import { userLogin } from './user-login.entity';
+import { User } from './user.entity';
 
 export interface UserRepository {
-  findByUsername(username: string): Promise<Users | null>;
-  save(user: Users): Promise<Users>;
+  findByUsername(username: string): Promise<User | null>;
+  LoginUser(user: userLogin): Promise<boolean>;
+  RegisterUser(user: User): Promise<boolean>;
 }
 
 export const USER_REPOSITORY = 'UserRepository';
