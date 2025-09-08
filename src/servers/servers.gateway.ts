@@ -1,8 +1,8 @@
 import { MessageBody, OnGatewayConnection, SubscribeMessage, WebSocketGateway, WebSocketServer, OnGatewayDisconnect, ConnectedSocket } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChannelService } from './channel.service';
-import { Users } from 'src/interfaces/users';
-import { UsersService } from 'src/users/users.service';
+import { User } from '../users/domain/user.entity';
+import { UserLoginService } from 'src/users/app/user-login.service';
 
 @WebSocketGateway({transports: ['websocket'], cors: { origin: '*' }})
 export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -11,7 +11,7 @@ export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect 
   private players: Map<string, { id: string; x: number; y: number }> = new Map();
 
 
-  constructor(private readonly usersService: UsersService, private readonly channelService: ChannelService){
+  constructor(private readonly loggingService: UserLoginService, private readonly channelService: ChannelService){
   }
 
   handleConnection(@ConnectedSocket() client: Socket) {
@@ -53,8 +53,8 @@ export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   @SubscribeMessage('login')
-  async handleLogin(@MessageBody() {password, username}: Users, @ConnectedSocket() client: Socket){
-    const result = await this.usersService.LoginUser({username, password, id: client.id, ip: client.handshake.address})
+  async handleLogin(@MessageBody() {password, username}: User, @ConnectedSocket() client: Socket){
+    const result = await this.loggingService.execute({username, password})
     if(result){
       client.emit("login", "user logged")
       return "user logged"
