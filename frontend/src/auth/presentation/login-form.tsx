@@ -38,10 +38,29 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
       const result = await loginUseCase.execute(formData);
       
       if (result.success) {
-        dispatch(loginUser({
-          user: {id: "user", username: formData.username},
-          token: result.token || ''
-        }));
+        const userData = localStorage.getItem('user_data');
+        const token = localStorage.getItem('auth_token');
+        
+        if (userData && token) {
+          try {
+            const user = JSON.parse(userData);
+            dispatch(loginUser({
+              user: user,
+              token: token
+            }));
+          } catch (parseError) {
+            console.error('Error parsing user data:', parseError);
+            dispatch(loginUser({
+              user: {id: "user", username: formData.username},
+              token: result.token || ''
+            }));
+          }
+        } else {
+          dispatch(loginUser({
+            user: {id: "user", username: formData.username},
+            token: result.token || ''
+          }));
+        }
         onSuccess?.();
       } else {
         setError(result.message || 'Error en el login');

@@ -29,6 +29,11 @@ declare global {
        * Comando personalizado para verificar que el usuario NO está autenticado
        */
       shouldNotBeAuthenticated(): Chainable<void>
+      
+      /**
+       * Comando personalizado para hacer logout
+       */
+      logout(): Chainable<void>
     }
   }
 }
@@ -60,4 +65,10 @@ Cypress.Commands.add('shouldNotBeAuthenticated', () => {
   cy.get('h2').should('contain', 'Iniciar Sesión')
   cy.get('input[name="username"]').should('be.visible')
   cy.get('input[name="password"]').should('be.visible')
+})
+
+// Comando personalizado para hacer logout
+Cypress.Commands.add('logout', () => {
+  // Buscar el botón de logout (puede estar en AuthContainer o en el juego)
+  cy.get('button').contains('Cerrar Sesión').click()
 })

@@ -42,12 +42,16 @@ export class ApiClient implements AuthRepository {
       const response = await this.client.post(API_CONFIG.ENDPOINTS.LOGIN, credentials);
       
       if (response.data.status == 200) {
-        localStorage.setItem('auth_token', response.data.token || 'dummy-token');
-        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        const token = response.data.token || 'dummy-token';
+        const user = response.data.user || { id: 'user', username: credentials.username };
+        
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user_data', JSON.stringify(user));
         
         return {
           success: true,
-          token: response.data.token || 'dummy-token',
+          token: token,
+          user: user,
           message: 'Login exitoso'
         };
       } else {
@@ -69,13 +73,16 @@ export class ApiClient implements AuthRepository {
       const response = await this.client.post(API_CONFIG.ENDPOINTS.REGISTER, userData);
       
       if (response.data.success) {
-        localStorage.setItem('auth_token', response.data.token || 'dummy-token');
-        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        const token = response.data.token || 'dummy-token';
+        const user = response.data.user || { id: 'user', username: userData.username };
+        
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user_data', JSON.stringify(user));
         
         return {
           success: true,
-          user: response.data.user,
-          token: response.data.token || 'dummy-token',
+          user: user,
+          token: token,
           message: 'Registro exitoso'
         };
       } else {
@@ -96,10 +103,14 @@ export class ApiClient implements AuthRepository {
     try {
       const userData = localStorage.getItem('user_data');
       if (userData) {
-        const user = JSON.parse(userData);
-        await this.client.post(API_CONFIG.ENDPOINTS.LOGOUT, {
-          username: user.username
-        });
+        try {
+          const user = JSON.parse(userData);
+          await this.client.post(API_CONFIG.ENDPOINTS.LOGOUT, {
+            username: user.username
+          });
+        } catch (parseError) {
+          console.error('Error parsing user data during logout:', parseError);
+        }
       }
     } catch (error) {
       console.error('Error during logout:', error);

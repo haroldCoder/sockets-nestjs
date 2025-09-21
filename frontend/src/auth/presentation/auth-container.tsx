@@ -12,12 +12,19 @@ export const AuthContainer: React.FC = () => {
 
   useEffect(() => {
     const initializeAuthState = async () => {
-      const apiClient = new ApiClient();
-      const user = await apiClient.getCurrentUser();
       const token = localStorage.getItem('auth_token');
+      const userData = localStorage.getItem('user_data');
       
-      if (user && token) {
-        dispatch(initializeAuth({ user, token }));
+      if (token && userData) {
+        try {
+          const user = JSON.parse(userData);
+          dispatch(initializeAuth({ user, token }));
+        } catch (error) {
+          console.error('Error parsing user data from localStorage:', error);
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user_data');
+          dispatch(initializeAuth(null));
+        }
       } else {
         dispatch(initializeAuth(null));
       }
