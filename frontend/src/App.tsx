@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { connectSocket, disconnectSocket, setConnected, setSocketId, setPlayers } from "./redux/socketSlice";
 import { AuthContainer } from "./auth/presentation/auth-container";
+import { LogoutButton } from "./components/LogoutButton";
 import Phaser from "phaser"
 import { updatePlayers } from "./utils/UpdatePlayers";
 import { initializeGame } from "./utils/InicializeGame";
+import './App.css'
 
 const App = () => {
   const dispatch = useDispatch();
@@ -66,8 +68,13 @@ const App = () => {
         <AuthContainer />
       ) : (
         <>
-          <div id="phaser-game"></div>
-          <button onClick={connect}>Empezar</button>
+          <div className="game-container">
+            <div className="game-header">
+              <LogoutButton className="game-logout-button" />
+            </div>
+            <div id="phaser-game"></div>
+            <button onClick={connect}>Empezar</button>
+          </div>
         </>
       )}
     </>

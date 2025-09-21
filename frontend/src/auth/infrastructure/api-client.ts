@@ -93,8 +93,20 @@ export class ApiClient implements AuthRepository {
   }
 
   async logout(): Promise<void> {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_data');
+    try {
+      const userData = localStorage.getItem('user_data');
+      if (userData) {
+        const user = JSON.parse(userData);
+        await this.client.post(API_CONFIG.ENDPOINTS.LOGOUT, {
+          username: user.username
+        });
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+    }
   }
 
   async getCurrentUser(): Promise<{ id: string; username: string } | null> {

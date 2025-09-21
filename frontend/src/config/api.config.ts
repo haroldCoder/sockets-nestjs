@@ -4,5 +4,6 @@ export const API_CONFIG = {
   ENDPOINTS: {
     LOGIN: '/users/login',
     REGISTER: '/users/register',
+    LOGOUT: '/users/logout',
   }
 };
