@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { FieldPacket, Pool, RowDataPacket } from 'mysql2/promise';
 import { User } from '../domain/user.entity';
 import { UserRepository } from '../domain/user.repository';
-import { userLogin } from '../domain/user-login.entity';
 
 @Injectable()
 export class MysqlUserRepository implements UserRepository {
@@ -50,6 +49,20 @@ export class MysqlUserRepository implements UserRepository {
       }
     } catch (err) {
       console.log(err);
+      return false;
+    }
+  }
+
+  async LogoutUser(username: string): Promise<boolean> {
+    try {
+      const user = await this.findByUsername(username);
+      if (!user) {
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.log('Error during logout:', err);
       return false;
     }
   }

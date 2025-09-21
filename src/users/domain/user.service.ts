@@ -32,5 +32,15 @@ export class DomainUserService {
 
     return new ResponseClient(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred", null);
   }
+
+  async logout(username: string): Promise<ResponseClient> {
+    const result = await this.userRepository.LogoutUser(username);
+
+    if (result) {
+      return new ResponseClient(HttpStatus.OK, "user logged out", null);
+    }
+
+    return new ResponseClient(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred during logout", null);
+  }
 }
 

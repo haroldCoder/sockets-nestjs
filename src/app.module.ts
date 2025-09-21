@@ -12,14 +12,15 @@ import { UsersController } from './users/users.controller';
 import { AppService } from './app.service';
 import { Module } from '@nestjs/common';
 import { UserRegisterService } from './users/app/user-register.service';
+import { UserLogoutService } from './users/app/user-logout.service';
 
 @Module({
   imports: [ConnectdbModule, ConfigModule.forRoot(), UsersModule],
   controllers: [AppController, UsersController],
-  providers: [AppService, ChannelService, ServersGateway, UserLoginService, UserRegisterService, DomainUserService, {
+  providers: [AppService, ChannelService, ServersGateway, UserLoginService, UserRegisterService, UserLogoutService, DomainUserService, {
     provide: USER_REPOSITORY,
     useClass: MysqlUserRepository,
   }],
-  exports: [UserLoginService],
+  exports: [UserLoginService, UserLogoutService],
 })
-export class AppModule {}
+export class AppModule { }
