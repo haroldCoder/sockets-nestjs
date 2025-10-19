@@ -6,13 +6,14 @@ import { UserLoginService } from 'src/users/app/user-login.service';
 
 @WebSocketGateway({transports: ['websocket'], cors: { origin: '*' }})
 export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server: Server;
-  private users: Set<Socket> = new Set();
-  private players: Map<string, { id: string; x: number; y: number }> = new Map();
+@WebSocketServer() server: Server;
+private users: Set<Socket> = new Set();
+private players: Map<string, { id: string; x: number; y: number; health: number }> = new Map();
+private projectiles: Map<string, { id: string; x: number; y: number; direction: string; owner: string }> = new Map();
 
 
-  constructor(private readonly loggingService: UserLoginService, private readonly channelService: ChannelService){
-  }
+constructor(private readonly loggingService: UserLoginService, private readonly channelService: ChannelService){
+}
 
   handleConnection(@ConnectedSocket() client: Socket) {
       console.log(`user connected: ${client.handshake.address} ${client.handshake.url}`);
@@ -21,6 +22,7 @@ export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect 
         id: client.id,
         x: 400,
         y: 300,
+        health: 100,
       };
   
       this.players.set(client.id, newPlayer);
@@ -71,10 +73,97 @@ export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect 
     @ConnectedSocket() client: Socket,
   ) {
     const player = this.players.get(client.id);
-    
+
     if (player) {
-      this.players.set(client.id, {id: client.id, x: position.x, y: position.y})
+      this.players.set(client.id, {id: client.id, x: position.x, y: position.y, health: player.health})
       this.server.emit('current-players', Array.from(this.players.values()));
     }
+  }
+
+  @SubscribeMessage('fireball')
+  handleFireball(
+    @MessageBody() data: { x: number; y: number; direction: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const projectileId = `${client.id}_${Date.now()}`;
+    const projectile = {
+      id: projectileId,
+      x: data.x,
+      y: data.y,
+      direction: data.direction,
+      owner: client.id,
+    };
+
+    this.projectiles.set(projectileId, projectile);
+
+    // Simulate projectile movement and collision detection
+    this.simulateProjectile(projectileId);
+  }
+
+  private simulateProjectile(projectileId: string) {
+    const projectile = this.projectiles.get(projectileId);
+    if (!projectile) return;
+
+    let newX = projectile.x;
+    let newY = projectile.y;
+
+    switch (projectile.direction) {
+      case 'left':
+        newX -= 10;
+        break;
+      case 'right':
+        newX += 10;
+        break;
+      case 'up':
+        newY -= 10;
+        break;
+      case 'down':
+        newY += 10;
+        break;
+    }
+
+    // Check for collisions with players
+    for (const [playerId, player] of this.players) {
+      if (playerId !== projectile.owner) {
+        // Check if projectile is within player bounds (player sprite is roughly 32x32)
+        const playerLeft = player.x - 16;
+        const playerRight = player.x + 16;
+        const playerTop = player.y - 16;
+        const playerBottom = player.y + 16;
+
+        if (newX >= playerLeft && newX <= playerRight && newY >= playerTop && newY <= playerBottom) {
+          console.log(`Projectile ${projectileId} hit player ${playerId}`);
+
+          // Reduce player health
+          player.health -= 20;
+          if (player.health <= 0) {
+            player.health = 0;
+          }
+
+          // Remove projectile
+          this.projectiles.delete(projectileId);
+
+          // Emit health update
+          this.server.emit('player-hit', { playerId, health: player.health });
+
+          // Emit updated players list
+          this.server.emit('current-players', Array.from(this.players.values()));
+          return;
+        }
+      }
+    }
+
+    // Update projectile position
+    projectile.x = newX;
+    projectile.y = newY;
+
+    // Check if projectile is out of bounds
+    if (newX < -50 || newX > 850 || newY < -50 || newY > 650) {
+      this.projectiles.delete(projectileId);
+      return;
+    }
+
+    // Continue simulation
+    setTimeout(() => this.simulateProjectile(projectileId), 50);
   }
 }

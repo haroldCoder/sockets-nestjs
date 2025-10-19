@@ -3,7 +3,7 @@ import { playerMove } from '../redux/socketSlice';
 import Phaser from 'phaser';
 
 export const initializeGame = (
-  players: Array<{ id: string; x: number; y: number }>,
+  players: Array<{ id: string; x: number; y: number; health: number }>,
   gameRef: React.MutableRefObject<Phaser.Game | null>,
   dispatch: Dispatch<UnknownAction>,
   id: React.MutableRefObject<string>,
@@ -37,6 +37,14 @@ export const initializeGame = (
 
         players.forEach((player) => {
           this.add.sprite(player.x, player.y, 'dude').setName(player.id);
+
+          // Create health bar background
+          const healthBarBg = this.add.rectangle(player.x, player.y - 25, 40, 6, 0x000000).setName(`health-bg-${player.id}`);
+          healthBarBg.setStrokeStyle(2, 0xffffff);
+
+          // Create health bar fill
+          const healthBarFill = this.add.rectangle(player.x - 18, player.y - 25, (player.health / 100) * 36, 4, 0x00ff00).setName(`health-fill-${player.id}`);
+          healthBarFill.setOrigin(0, 0.5);
         });
       },
       init: function (this: Phaser.Scene) {
@@ -76,6 +84,11 @@ export const initializeGame = (
                 duration: 800,
                 onComplete: () => fireball.destroy(),
               });
+              // Emit fireball event to backend
+              const socket = (window as any).socket;
+              if (socket) {
+                socket.emit('fireball', { x: player.x, y: player.y, direction: 'left' });
+              }
               break;
             }
             case 'd':
@@ -89,6 +102,11 @@ export const initializeGame = (
                 duration: 800,
                 onComplete: () => fireball.destroy(),
               });
+              // Emit fireball event to backend
+              const socket = (window as any).socket;
+              if (socket) {
+                socket.emit('fireball', { x: player.x, y: player.y, direction: 'right' });
+              }
               break;
             }
             case 'w':
@@ -102,6 +120,11 @@ export const initializeGame = (
                 duration: 800,
                 onComplete: () => fireball.destroy(),
               });
+              // Emit fireball event to backend
+              const socket = (window as any).socket;
+              if (socket) {
+                socket.emit('fireball', { x: player.x, y: player.y, direction: 'up' });
+              }
               break;
             }
             case 's':
@@ -115,6 +138,11 @@ export const initializeGame = (
                 duration: 800,
                 onComplete: () => fireball.destroy(),
               });
+              // Emit fireball event to backend
+              const socket = (window as any).socket;
+              if (socket) {
+                socket.emit('fireball', { x: player.x, y: player.y, direction: 'down' });
+              }
               break;
             }
           }
