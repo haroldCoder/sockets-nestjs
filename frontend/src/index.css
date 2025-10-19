@@ -1,3 +1,7 @@
+body{
+  margin: 0;
+}
+
 #canvas-container {
   width: 100%;
   text-align: center;
@@ -6,4 +10,143 @@
 canvas {
   display: inline-block;
   border: 5px solid black;
+}
+
+/* Estilos para autenticación */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #000;
+}
+
+.auth-form {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.auth-form h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #fff;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.error-message {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff6b6b;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.auth-form button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #646cff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.auth-form button:hover {
+  background: #535bf2;
+}
+
+.auth-form button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #646cff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  margin-top: 12px;
+}
+
+.link-button:hover {
+  color: #535bf2;
+}
+
+.user-info {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-info h3 {
+  color: #4ade80;
+  margin-bottom: 1rem;
+}
+
+.user-info p {
+  color: #fff;
+  margin-bottom: 1.5rem;
+}
+
+.logout-button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.logout-button:hover {
+  background: #dc2626;
 }

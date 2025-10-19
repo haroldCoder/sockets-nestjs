@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { connectSocket, disconnectSocket, setConnected, setSocketId, setPlayers } from "./redux/socketSlice";
+import { AuthContainer } from "./auth/presentation/auth-container";
+import { LogoutButton } from "./components/LogoutButton";
 import Phaser from "phaser"
 import { updatePlayers } from "./utils/UpdatePlayers";
 import { initializeGame } from "./utils/InicializeGame";
+import './App.css'
 
 const App = () => {
   const dispatch = useDispatch();
   const { connected, socket, players } = useSelector((state: any) => state.socket);
+  const { isAuthenticated } = useSelector((state: any) => state.auth);
   const connect = () => { dispatch(connectSocket(import.meta.env.VITE_APP_SERVER)); dispatch(setConnected(true)) };
   const id = useRef<string>("");
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -60,10 +64,19 @@ const App = () => {
 
   return (
     <>
-      <div id="phaser-game">
-
-      </div>
-      <button onClick={connect}>Empezar</button>
+      {!isAuthenticated ? (
+        <AuthContainer />
+      ) : (
+        <>
+          <div className="game-container">
+            <div className="game-header">
+              <LogoutButton className="game-logout-button" />
+            </div>
+            <div id="phaser-game"></div>
+            <button onClick={connect}>Empezar</button>
+          </div>
+        </>
+      )}
     </>
   );
 };
