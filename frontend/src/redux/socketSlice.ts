@@ -25,6 +25,15 @@ const socketSlice = createSlice({
     connectSocket(state, action: PayloadAction<string>) {
       if (!socket) {
         socket = io(action.payload, { transports: ["websocket"] });
+        socket.on('maze', (data: any) => {
+          try {
+            (window as any).__mazeData = data;
+            try { window.dispatchEvent(new CustomEvent('mazeReady', { detail: data })); } catch (e) { }
+            console.log('Maze stored on client from socketSlice listener');
+          } catch (e) {
+            console.warn('Failed to store maze data from socket listener', e);
+          }
+        });
         state.socket = socket
       }
     },

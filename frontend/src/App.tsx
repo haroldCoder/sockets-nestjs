@@ -73,7 +73,24 @@ const App = () => {
 
   useEffect(() => {
     if (players.length > prevPlayersCount) {
-      initializeGame(players, gameRef, dispatch, id);
+      const startGame = () => initializeGame(players, gameRef, dispatch, id);
+
+      if ((window as any).__mazeData) {
+        startGame();
+      } else {
+        const onMaze = () => {
+          startGame();
+          window.removeEventListener('mazeReady', onMaze);
+        };
+        window.addEventListener('mazeReady', onMaze);
+
+        setTimeout(() => {
+          if (!(window as any).__mazeData) {
+            window.removeEventListener('mazeReady', onMaze);
+            startGame();
+          }
+        }, 500);
+      }
     }
     setPrevPlayersCount(players.length);
   }, [players]);

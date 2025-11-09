@@ -24,6 +24,16 @@ const useSocket = () => {
       setMessage(data);
     });
 
+    socket?.on('maze', (data) => {
+      try {
+        (window as any).__mazeData = data;
+        console.log('Maze received from server', data);
+        try { window.dispatchEvent(new CustomEvent('mazeReady', { detail: data })); } catch(e) {}
+      } catch (e) {
+        console.warn('Failed to store maze data', e);
+      }
+    });
+
     socket?.on("disconnect", () => {
       console.log("Desconectado del servidor WebSocket");
       setIsConnected(false);

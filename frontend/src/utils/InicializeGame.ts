@@ -32,18 +32,226 @@ export const initializeGame = (
       create: function (this: Phaser.Scene) {
         this.add.rectangle(400, 300, 800, 600, 0xaaaaaa);
 
+        const serverMaze = (window as any).__mazeData;
+        const cellSize = serverMaze?.cellSize ?? 64;
+        const cols = serverMaze?.cols ?? Math.floor(this.scale.width / cellSize);
+        const rows = serverMaze?.rows ?? Math.floor(this.scale.height / cellSize);
+        const walls: Phaser.Geom.Rectangle[] = [];
+
+        if (serverMaze && serverMaze.walls && serverMaze.walls.length) {
+          serverMaze.walls.forEach((w: { x: number; y: number; w: number; h: number }) => {
+            const cx = w.x + w.w / 2;
+            const cy = w.y + w.h / 2;
+            const wallObj = this.add.rectangle(cx, cy, w.w, w.h, 0x333333);
+            wallObj.setStrokeStyle(1, 0x000000);
+            walls.push(new Phaser.Geom.Rectangle(w.x, w.y, w.w, w.h));
+          });
+          this.data.set('walls', walls);
+        } else {
+          const cellSize = 64;
+          const cols = Math.floor(this.scale.width / cellSize);
+          const rows = Math.floor(this.scale.height / cellSize);
+          const wallThickness = 6;
+
+          type Cell = { x: number; y: number; walls: { top: boolean; right: boolean; bottom: boolean; left: boolean }; visited: boolean };
+
+          const grid: Cell[][] = [];
+          for (let y = 0; y < rows; y++) {
+            const row: Cell[] = [];
+            for (let x = 0; x < cols; x++) {
+              row.push({ x, y, walls: { top: true, right: true, bottom: true, left: true }, visited: false });
+            }
+            grid.push(row);
+          }
+
+          const neighbors = (c: Cell) => {
+            const n: { cell: Cell; dir: string }[] = [];
+            const { x, y } = c;
+            if (y > 0 && !grid[y - 1][x].visited) n.push({ cell: grid[y - 1][x], dir: 'top' });
+            if (x < cols - 1 && !grid[y][x + 1].visited) n.push({ cell: grid[y][x + 1], dir: 'right' });
+            if (y < rows - 1 && !grid[y + 1][x].visited) n.push({ cell: grid[y + 1][x], dir: 'bottom' });
+            if (x > 0 && !grid[y][x - 1].visited) n.push({ cell: grid[y][x - 1], dir: 'left' });
+            return n;
+          };
+
+          const stack: Cell[] = [];
+          const start = grid[0][0];
+          start.visited = true;
+          stack.push(start);
+
+          while (stack.length) {
+            const current = stack[stack.length - 1];
+            const n = neighbors(current);
+            if (n.length) {
+              const nxt = n[Math.floor(Math.random() * n.length)];
+              const nx = nxt.cell.x;
+              const ny = nxt.cell.y;
+
+              if (nxt.dir === 'top') {
+                current.walls.top = false;
+                grid[ny][nx].walls.bottom = false;
+              } else if (nxt.dir === 'right') {
+                current.walls.right = false;
+                grid[ny][nx].walls.left = false;
+              } else if (nxt.dir === 'bottom') {
+                current.walls.bottom = false;
+                grid[ny][nx].walls.top = false;
+              } else if (nxt.dir === 'left') {
+                current.walls.left = false;
+                grid[ny][nx].walls.right = false;
+              }
+              grid[ny][nx].visited = true;
+              stack.push(grid[ny][nx]);
+            } else {
+              stack.pop();
+            }
+          }
+
+          for (let i = 0; i < Math.floor((cols * rows) / 3); i++) {
+            const rx = Math.floor(Math.random() * cols);
+            const ry = Math.floor(Math.random() * rows);
+            const c = grid[ry][rx];
+            const dirs = ['top', 'right', 'bottom', 'left'];
+            const dir = dirs[Math.floor(Math.random() * dirs.length)];
+            if (dir === 'top' && ry > 0) {
+              c.walls.top = false;
+              grid[ry - 1][rx].walls.bottom = false;
+            }
+            if (dir === 'right' && rx < cols - 1) {
+              c.walls.right = false;
+              grid[ry][rx + 1].walls.left = false;
+            }
+            if (dir === 'bottom' && ry < rows - 1) {
+              c.walls.bottom = false;
+              grid[ry + 1][rx].walls.top = false;
+            }
+            if (dir === 'left' && rx > 0) {
+              c.walls.left = false;
+              grid[ry][rx - 1].walls.right = false;
+            }
+          }
+
+          const roomAttempts = Math.max(3, Math.floor((cols * rows) / 40));
+          for (let r = 0; r < roomAttempts; r++) {
+            const rw = 1 + Math.floor(Math.random() * Math.min(3, cols - 1));
+            const rh = 1 + Math.floor(Math.random() * Math.min(3, rows - 1));
+            const rx = Math.floor(Math.random() * Math.max(1, cols - rw));
+            const ry = Math.floor(Math.random() * Math.max(1, rows - rh));
+            for (let yy = ry; yy < ry + rh; yy++) {
+              for (let xx = rx; xx < rx + rw; xx++) {
+                const cell = grid[yy][xx];
+
+                if (yy > ry) {
+                  cell.walls.top = false;
+                  grid[yy - 1][xx].walls.bottom = false;
+                }
+                if (xx > rx) {
+                  cell.walls.left = false;
+                  grid[yy][xx - 1].walls.right = false;
+                }
+              }
+            }
+          }
+
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const c = grid[y][x];
+              const cellX = x * cellSize;
+              const cellY = y * cellSize;
+              const centerX = cellX + cellSize / 2;
+              const centerY = cellY + cellSize / 2;
+
+              if (c.walls.top) {
+                const w = cellSize + wallThickness;
+                const h = wallThickness;
+                const cx = centerX;
+                const cy = cellY + h / 2;
+                const wallObj = this.add.rectangle(cx, cy, w, h, 0x333333);
+                wallObj.setStrokeStyle(1, 0x000000);
+                walls.push(new Phaser.Geom.Rectangle(cx - w / 2, cy - h / 2, w, h));
+              }
+
+              if (c.walls.right) {
+                const w = wallThickness;
+                const h = cellSize + wallThickness;
+                const cx = cellX + cellSize - w / 2;
+                const cy = centerY;
+                const wallObj = this.add.rectangle(cx, cy, w, h, 0x333333);
+                wallObj.setStrokeStyle(1, 0x000000);
+                walls.push(new Phaser.Geom.Rectangle(cx - w / 2, cy - h / 2, w, h));
+              }
+
+              if (c.walls.bottom) {
+                const w = cellSize + wallThickness;
+                const h = wallThickness;
+                const cx = centerX;
+                const cy = cellY + cellSize - h / 2;
+                const wallObj = this.add.rectangle(cx, cy, w, h, 0x333333);
+                wallObj.setStrokeStyle(1, 0x000000);
+                walls.push(new Phaser.Geom.Rectangle(cx - w / 2, cy - h / 2, w, h));
+              }
+
+              if (c.walls.left) {
+                const w = wallThickness;
+                const h = cellSize + wallThickness;
+                const cx = cellX + w / 2;
+                const cy = centerY;
+                const wallObj = this.add.rectangle(cx, cy, w, h, 0x333333);
+                wallObj.setStrokeStyle(1, 0x000000);
+                walls.push(new Phaser.Geom.Rectangle(cx - w / 2, cy - h / 2, w, h));
+              }
+            }
+          }
+
+          this.data.set('walls', walls);
+        }
+
         const projectiles = this.add.group();
         this.data.set('projectiles', projectiles);
 
-        players.forEach((player) => {
-          this.add.sprite(player.x, player.y, 'dude').setName(player.id);
+        const isPositionFree = (cx: number, cy: number, padding = 4) => {
+          const pw = 32;
+          const ph = 32;
+          const rect = new Phaser.Geom.Rectangle(cx - pw / 2 - padding, cy - ph / 2 - padding, pw + padding * 2, ph + padding * 2);
+          return !walls.some(w => Phaser.Geom.Intersects.RectangleToRectangle(rect, w));
+        };
 
-          // Create health bar background
-          const healthBarBg = this.add.rectangle(player.x, player.y - 25, 40, 6, 0x000000).setName(`health-bg-${player.id}`);
+        const findSpawnForPlayer = (attempts = 300) => {
+          for (let i = 0; i < attempts; i++) {
+            const rx = Math.floor(Math.random() * cols);
+            const ry = Math.floor(Math.random() * rows);
+            const cx = rx * cellSize + cellSize / 2;
+            const cy = ry * cellSize + cellSize / 2;
+            if (isPositionFree(cx, cy, 6)) return { x: cx, y: cy };
+          }
+          return { x: this.scale.width / 2, y: this.scale.height / 2 };
+        };
+
+        players.forEach((player) => {
+          let px = player.x;
+          let py = player.y;
+
+          if (player.id === id.current) {
+            if (!isPositionFree(px, py)) {
+              const spawn = findSpawnForPlayer();
+              px = spawn.x;
+              py = spawn.y;
+              dispatch(playerMove({ id: id.current!, x: px, y: py }));
+            }
+          } else {
+            if (!isPositionFree(px, py)) {
+              const spawn = findSpawnForPlayer(100);
+              px = spawn.x;
+              py = spawn.y;
+            }
+          }
+
+          this.add.sprite(px, py, 'dude').setName(player.id);
+
+          const healthBarBg = this.add.rectangle(px, py - 25, 40, 6, 0x000000).setName(`health-bg-${player.id}`);
           healthBarBg.setStrokeStyle(2, 0xffffff);
 
-          // Create health bar fill
-          const healthBarFill = this.add.rectangle(player.x - 18, player.y - 25, (player.health / 100) * 36, 4, 0x00ff00).setName(`health-fill-${player.id}`);
+          const healthBarFill = this.add.rectangle(px - 18, py - 25, (player.health / 100) * 36, 4, 0x00ff00).setName(`health-fill-${player.id}`);
           healthBarFill.setOrigin(0, 0.5);
         });
       },
@@ -56,23 +264,49 @@ export const initializeGame = (
 
           if (!player) return;
 
+          const walls = this.data.get('walls') as Phaser.Geom.Rectangle[] | undefined;
+
+          const willCollide = (newX: number, newY: number) => {
+            if (!walls) return false;
+            const pw = (player.displayWidth || (player.width || 32));
+            const ph = (player.displayHeight || (player.height || 32));
+            const rect = new Phaser.Geom.Rectangle(newX - pw / 2, newY - ph / 2, pw, ph);
+            return walls.some(w => Phaser.Geom.Intersects.RectangleToRectangle(rect, w));
+          };
+
           switch (event.key) {
-            case 'ArrowLeft':
-              player.x -= 5;
-              dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+            case 'ArrowLeft': {
+              const newX = player.x - 5;
+              if (!willCollide(newX, player.y)) {
+                player.x = newX;
+                dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+              }
               break;
-            case 'ArrowRight':
-              player.x += 5;
-              dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+            }
+            case 'ArrowRight': {
+              const newX = player.x + 5;
+              if (!willCollide(newX, player.y)) {
+                player.x = newX;
+                dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+              }
               break;
-            case 'ArrowUp':
-              player.y -= 5;
-              dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+            }
+            case 'ArrowUp': {
+              const newY = player.y - 5;
+              if (!willCollide(player.x, newY)) {
+                player.y = newY;
+                dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+              }
               break;
-            case 'ArrowDown':
-              player.y += 5;
-              dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+            }
+            case 'ArrowDown': {
+              const newY = player.y + 5;
+              if (!willCollide(player.x, newY)) {
+                player.y = newY;
+                dispatch(playerMove({ id: id.current!, x: player.x, y: player.y }));
+              }
               break;
+            }
             case 'a':
             case 'A': {
               const group = this.data.get('projectiles') as Phaser.GameObjects.Group | undefined;
