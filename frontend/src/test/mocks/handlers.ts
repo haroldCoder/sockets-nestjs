@@ -1,7 +1,6 @@
 import { http, HttpResponse } from 'msw'
 
 export const handlers = [
-  // Mock para login exitoso
   http.post('http://localhost:3000/auth/login', () => {
     return HttpResponse.json({
       status: 200,
@@ -14,7 +13,6 @@ export const handlers = [
     })
   }),
 
-  // Mock para login fallido
   http.post('http://localhost:3000/auth/login', ({ request }) => {
     return HttpResponse.json({
       status: 401,
@@ -22,7 +20,6 @@ export const handlers = [
     }, { status: 401 })
   }),
 
-  // Mock para registro exitoso
   http.post('http://localhost:3000/auth/register', () => {
     return HttpResponse.json({
       success: true,
@@ -35,7 +32,6 @@ export const handlers = [
     })
   }),
 
-  // Mock para registro fallido
   http.post('http://localhost:3000/auth/register', () => {
     return HttpResponse.json({
       success: false,
@@ -43,7 +39,6 @@ export const handlers = [
     }, { status: 400 })
   }),
 
-  // Mock para obtener usuario actual
   http.get('http://localhost:3000/auth/me', () => {
     return HttpResponse.json({
       id: '1',

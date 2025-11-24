@@ -216,7 +216,6 @@ describe('Domain Entities', () => {
 
   describe('Type Safety', () => {
     it('debería mantener la consistencia de tipos entre entidades', () => {
-      // Verificar que UserCredentials es compatible con User
       const credentials: UserCredentials = {
         username: 'testuser',
         password: 'password123'

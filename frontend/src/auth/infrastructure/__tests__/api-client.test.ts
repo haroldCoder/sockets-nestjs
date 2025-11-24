@@ -3,11 +3,9 @@ import axios from 'axios'
 import { ApiClient } from '../api-client'
 import { UserCredentials, UserRegistration } from '../../domain/user.entity'
 
-// Mock de axios
 vi.mock('axios')
 const mockedAxios = vi.mocked(axios)
 
-// Mock de localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -26,7 +24,6 @@ describe('ApiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     
-    // Crear mock de la instancia de axios
     mockAxiosInstance = {
       post: vi.fn(),
       get: vi.fn(),
@@ -41,7 +38,7 @@ describe('ApiClient', () => {
     }
 
     mockedAxios.create.mockReturnValue(mockAxiosInstance)
-    apiClient = new ApiClient('http://localhost:3000')
+    apiClient = new ApiClient('http:
   })
 
   afterEach(() => {
@@ -51,7 +48,7 @@ describe('ApiClient', () => {
   describe('constructor', () => {
     it('debería crear una instancia de axios con la configuración correcta', () => {
       expect(mockedAxios.create).toHaveBeenCalledWith({
-        baseURL: 'http://localhost:3000',
+        baseURL: 'http:
         timeout: 10000,
         headers: {
           'Content-Type': 'application/json'

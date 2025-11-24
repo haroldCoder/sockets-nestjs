@@ -4,7 +4,6 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import authReducer from '../../redux/authSlice'
 
-// Crear store de prueba con estado personalizable
 export const createTestStore = (initialState = {}) => {
   return configureStore({
     reducer: {
@@ -23,7 +22,6 @@ export const createTestStore = (initialState = {}) => {
   })
 }
 
-// Wrapper personalizado para render con Redux
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   initialState?: any
 }
@@ -44,7 +42,6 @@ export const renderWithRedux = (
   }
 }
 
-// Re-exportar todo desde @testing-library/react
 export * from '@testing-library/react'
 export { renderWithRedux as render }
 

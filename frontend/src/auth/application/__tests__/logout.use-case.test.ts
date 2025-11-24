@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { LogoutUseCase } from '../logout.use-case'
 import { AuthRepository } from '../../domain/auth.repository'
 
-// Mock del repositorio
 const mockAuthRepository: AuthRepository = {
   login: vi.fn(),
   register: vi.fn(),

@@ -10,11 +10,15 @@ const socketSlice = createSlice({
     connected: false,
     players: Array<{ id: string; x: number; y: number; health: number }>(),
     socketid: "",
-    socket: null
+    socket: null,
+    monster: { x: 400, y: 300, targetId: null as string | null, health: 100 }
   },
   reducers: {
     setConnected(state, action: PayloadAction<boolean>) {
       state.connected = action.payload;
+    },
+    updateMonster(state, action: PayloadAction<{ x: number; y: number; targetId: string | null; health: number }>) {
+      state.monster = action.payload;
     },
     setPlayers(state, action: PayloadAction<Array<{ id: string; x: number; y: number; health: number }>>) {
       state.players = action.payload;
@@ -64,5 +68,5 @@ const socketSlice = createSlice({
   }
 });
 
-export const { setConnected, connectSocket, disconnectSocket, setPlayers, playerMove, setSocketId, updatePlayerHealth } = socketSlice.actions;
+export const { setConnected, setPlayers, setSocketId, connectSocket, disconnectSocket, playerMove, updatePlayerHealth, updateMonster } = socketSlice.actions;
 export default socketSlice.reducer;

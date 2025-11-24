@@ -7,11 +7,9 @@ import { AuthContainer } from '../../presentation/auth-container'
 import { ApiClient } from '../../infrastructure/api-client'
 import authReducer from '../../../redux/authSlice'
 
-// Mock del ApiClient
 vi.mock('../../infrastructure/api-client')
 const mockApiClient = vi.mocked(ApiClient)
 
-// Mock de localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -23,7 +21,6 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
-// Crear store de prueba
 const createTestStore = (initialState = {}) => {
   return configureStore({
     reducer: {
@@ -42,7 +39,6 @@ const createTestStore = (initialState = {}) => {
   })
 }
 
-// Wrapper para proveer el store
 const renderWithProvider = (component: React.ReactElement, initialState = {}) => {
   const store = createTestStore(initialState)
   return {
@@ -61,7 +57,6 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
     vi.clearAllMocks()
     localStorageMock.getItem.mockReturnValue(null)
     
-    // Mock de los métodos del ApiClient
     mockLogin = vi.fn()
     mockRegister = vi.fn()
     mockLogout = vi.fn()
@@ -79,7 +74,6 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
     it('debería completar el flujo de login exitosamente', async () => {
       const user = userEvent.setup()
       
-      // Configurar mock para login exitoso
       mockLogin.mockResolvedValue({
         success: true,
         message: 'Login exitoso',
@@ -88,12 +82,10 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
 
       const { store } = renderWithProvider(<AuthContainer />)
 
-      // Esperar a que se cargue el formulario
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
       })
 
-      // Llenar el formulario de login
       const usernameInput = screen.getByLabelText('Usuario:')
       const passwordInput = screen.getByLabelText('Contraseña:')
       const submitButton = screen.getByRole('button', { name: 'Iniciar Sesión' })
@@ -102,12 +94,10 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
       await user.type(passwordInput, 'password123')
       await user.click(submitButton)
 
-      // Esperar a que se complete el login
       await waitFor(() => {
         expect(screen.getByText('¡Bienvenido!')).toBeInTheDocument()
       })
 
-      // Verificar que el estado se actualizó correctamente
       const state = store.getState()
       expect(state.auth.isAuthenticated).toBe(true)
       expect(state.auth.user).toEqual({ id: 'user', username: 'testuser' })
@@ -117,7 +107,6 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
     it('debería manejar el login fallido', async () => {
       const user = userEvent.setup()
       
-      // Configurar mock para login fallido
       mockLogin.mockResolvedValue({
         success: false,
         message: 'Credenciales inválidas'
@@ -125,12 +114,10 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
 
       renderWithProvider(<AuthContainer />)
 
-      // Esperar a que se cargue el formulario
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
       })
 
-      // Llenar el formulario con credenciales incorrectas
       const usernameInput = screen.getByLabelText('Usuario:')
       const passwordInput = screen.getByLabelText('Contraseña:')
       const submitButton = screen.getByRole('button', { name: 'Iniciar Sesión' })
@@ -139,12 +126,10 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
       await user.type(passwordInput, 'wrongpassword')
       await user.click(submitButton)
 
-      // Verificar que se muestra el error
       await waitFor(() => {
         expect(screen.getByText('Credenciales inválidas')).toBeInTheDocument()
       })
 
-      // Verificar que el formulario sigue visible
       expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
     })
   })
@@ -153,7 +138,6 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
     it('debería completar el flujo de registro exitosamente', async () => {
       const user = userEvent.setup()
       
-      // Configurar mock para registro exitoso
       mockRegister.mockResolvedValue({
         success: true,
         message: 'Registro exitoso',
@@ -163,21 +147,17 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
 
       const { store } = renderWithProvider(<AuthContainer />)
 
-      // Esperar a que se cargue el formulario de login
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
       })
 
-      // Cambiar al formulario de registro
       const switchToRegisterButton = screen.getByRole('button', { name: 'Regístrate aquí' })
       await user.click(switchToRegisterButton)
 
-      // Verificar que se muestra el formulario de registro
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Registrarse' })).toBeInTheDocument()
       })
 
-      // Llenar el formulario de registro
       const usernameInput = screen.getByLabelText('Usuario:')
       const idInput = screen.getByLabelText('ID:')
       const passwordInput = screen.getByLabelText('Contraseña:')
@@ -190,15 +170,12 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
       await user.type(confirmPasswordInput, 'password123')
       await user.click(submitButton)
 
-      // Verificar que se muestra el loading
       expect(screen.getByText('Registrando...')).toBeInTheDocument()
 
-      // Esperar a que se complete el registro
       await waitFor(() => {
         expect(screen.getByText('¡Bienvenido!')).toBeInTheDocument()
       })
 
-      // Verificar que el estado se actualizó correctamente
       const state = store.getState()
       expect(state.auth.isAuthenticated).toBe(true)
       expect(state.auth.user).toEqual({ id: '1', username: 'newuser' })
@@ -210,7 +187,6 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
     it('debería completar el flujo de logout correctamente', async () => {
       const user = userEvent.setup()
       
-      // Estado inicial autenticado
       const initialState = {
         isAuthenticated: true,
         user: { id: '1', username: 'testuser' },
@@ -219,28 +195,22 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
 
       const { store } = renderWithProvider(<AuthContainer />, initialState)
 
-      // Verificar que se muestra la interfaz de usuario autenticado
       expect(screen.getByText('¡Bienvenido!')).toBeInTheDocument()
 
-      // Hacer logout
       const logoutButton = screen.getByRole('button', { name: 'Cerrar Sesión' })
       await user.click(logoutButton)
 
-      // Verificar que se llama al método logout
       expect(mockLogout).toHaveBeenCalled()
 
-      // Verificar que se muestra el formulario de login
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
       })
 
-      // Verificar que el estado se actualizó correctamente
       const state = store.getState()
       expect(state.auth.isAuthenticated).toBe(false)
       expect(state.auth.user).toBeNull()
       expect(state.auth.token).toBeNull()
 
-      // Verificar que se limpió el localStorage
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data')
     })
@@ -256,12 +226,10 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
 
       const { store } = renderWithProvider(<AuthContainer />)
 
-      // Esperar a que se inicialice la autenticación
       await waitFor(() => {
         expect(screen.getByText('¡Bienvenido!')).toBeInTheDocument()
       })
 
-      // Verificar que el estado se inicializó correctamente
       const state = store.getState()
       expect(state.auth.isAuthenticated).toBe(true)
       expect(state.auth.user).toEqual(mockUser)
@@ -274,12 +242,10 @@ describe('Auth Flow Integration Tests (Simplified)', () => {
 
       const { store } = renderWithProvider(<AuthContainer />)
 
-      // Esperar a que se cargue el formulario de login
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
       })
 
-      // Verificar que el estado se inicializó como no autenticado
       const state = store.getState()
       expect(state.auth.isAuthenticated).toBe(false)
       expect(state.auth.user).toBeNull()

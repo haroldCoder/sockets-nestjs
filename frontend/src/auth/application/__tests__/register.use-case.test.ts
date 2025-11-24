@@ -3,7 +3,6 @@ import { RegisterUseCase } from '../register.use-case'
 import { AuthRepository } from '../../domain/auth.repository'
 import { UserRegistration, AuthResult } from '../../domain/user.entity'
 
-// Mock del repositorio
 const mockAuthRepository: AuthRepository = {
   login: vi.fn(),
   register: vi.fn(),

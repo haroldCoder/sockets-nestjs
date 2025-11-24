@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { connectSocket, disconnectSocket, setConnected, setSocketId, setPlayers, updatePlayerHealth } from "./redux/socketSlice";
+import { connectSocket, disconnectSocket, setConnected, setSocketId, setPlayers, updatePlayerHealth, updateMonster } from "./redux/socketSlice";
 import { AuthContainer } from "./auth/presentation/auth-container";
 import { LogoutButton } from "./components/LogoutButton";
 import Phaser from "phaser"
@@ -15,7 +15,6 @@ const App = () => {
   const connect = () => {
     const socket = dispatch(connectSocket(import.meta.env.VITE_APP_SERVER));
     dispatch(setConnected(true));
-    // Store socket reference globally for fireball events
     (window as any).socket = socket;
   };
   const id = useRef<string>("");
@@ -32,10 +31,7 @@ const App = () => {
         console.log("Conectado a Socket.IO");
       });
 
-      socket.on("connect", () => {
-        setConnected(true);
-        console.log("Conectado a Socket.IO");
-      });
+
 
 
       socket.on("disconnect", () => {
@@ -43,19 +39,44 @@ const App = () => {
         console.log("Desconectado de Socket.IO");
       });
 
-      socket.on("current-players", (players: Array<{ id: string, x: number, y: number, health: number }>) => {
-        dispatch(setPlayers(players));
-        if (gameRef.current) {
-          const scene = gameRef.current.scene.getAt(0) as Phaser.Scene;
-          if (scene) {
-            updatePlayers(scene, players);
-          }
-        }
-      });
+socket?.on("current-players", (players: Array<{ id: string, x: number, y: number, health: number }>) => {
+  dispatch(setPlayers(players));
+  if (gameRef.current) {
+    const scene = gameRef.current.scene.getAt(0) as Phaser.Scene;
+    if (scene) {
+      updatePlayers(scene, players);
+    }
+  }
+});
 
-      socket.on("player-hit", (data: { playerId: string, health: number }) => {
+socket?.on("monster-update", (monsterState: { x: number; y: number; targetId: string | null; health: number }) => {
+  dispatch(updateMonster(monsterState));
+  
+  if (gameRef.current) {
+    const scene = gameRef.current.scene.getAt(0) as Phaser.Scene;
+    if (scene && scene.sys && scene.sys.isActive()) {
+      const monsterSprite = scene.data.get('monsterSprite') as Phaser.GameObjects.Sprite | undefined;
+      const healthBarBg = scene.data.get('monsterHealthBg') as Phaser.GameObjects.Rectangle | undefined;
+      const healthBarFill = scene.data.get('monsterHealthFill') as Phaser.GameObjects.Rectangle | undefined;
+      if (monsterSprite) {
+        monsterSprite.setPosition(monsterState.x, monsterState.y);
+        
+        if (healthBarBg) {
+          healthBarBg.setPosition(monsterState.x, monsterState.y - 30);
+        }
+        if (healthBarFill) {
+          healthBarFill.setPosition(monsterState.x - 23, monsterState.y - 30);
+          healthBarFill.width = (monsterState.health / 100) * 46;
+        }
+      } else {
+        console.warn('Monster sprite not found in scene');
+      }
+    }
+  }
+});
+
+socket.on("player-hit", (data: { playerId: string, health: number }) => {
         dispatch(updatePlayerHealth(data));
-        // Update the game scene immediately
         if (gameRef.current) {
           const scene = gameRef.current.scene.getAt(0) as Phaser.Scene;
           if (scene) {
@@ -65,11 +86,14 @@ const App = () => {
       });
 
       return () => {
-        gameRef.current?.destroy(true);
-        dispatch(disconnectSocket());
+        socket?.off("connect");
+        socket?.off("disconnect");
+        socket?.off("current-players");
+        socket?.off("monster-update");
+        socket?.off("player-hit");
       };
     }
-  }, [dispatch, connected]);
+  }, [dispatch, connected, socket]);
 
   useEffect(() => {
     if (players.length > prevPlayersCount) {

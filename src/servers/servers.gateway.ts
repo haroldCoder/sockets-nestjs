@@ -3,6 +3,9 @@ import { Server, Socket } from 'socket.io';
 import { ChannelService } from './channel.service';
 import { User } from '../users/domain/user.entity';
 import { UserLoginService } from 'src/users/app/user-login.service';
+import { MonsterService } from './monster.service';
+
+export type Cell = { x: number; y: number; walls: { top: boolean; right: boolean; bottom: boolean; left: boolean }; visited: boolean };
 
 @WebSocketGateway({transports: ['websocket'], cors: { origin: '*' }})
 export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -10,11 +13,15 @@ export class ServersGateway implements OnGatewayConnection, OnGatewayDisconnect 
 private users: Set<Socket> = new Set();
 private players: Map<string, { id: string; x: number; y: number; health: number }> = new Map();
 private projectiles: Map<string, { id: string; x: number; y: number; direction: string; owner: string }> = new Map();
- private maze: { cellSize: number; cols: number; rows: number; walls: Array<{ x: number; y: number; w: number; h: number }> } | null = null;
- private mazeGenerating = false;
+private maze: { cellSize: number; cols: number; rows: number; walls: Array<{ x: number; y: number; w: number; h: number }>; grid: Cell[][] } | null = null;
+private mazeGenerating = false;
+private monsterUpdateInterval: NodeJS.Timeout | null = null;
 
-
-constructor(private readonly loggingService: UserLoginService, private readonly channelService: ChannelService){
+constructor(
+  private readonly loggingService: UserLoginService, 
+  private readonly channelService: ChannelService,
+  private readonly monsterService: MonsterService
+){
 }
 
   handleConnection(@ConnectedSocket() client: Socket) {
@@ -34,6 +41,9 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
         this.maze = this.generateMaze(800, 600);
         this.mazeGenerating = false;
         this.server.emit('maze', this.maze);
+        
+        this.monsterService.reset();
+        this.initializeMonsterPosition();
       } else if (this.maze) {
         client.emit('maze', this.maze);
       } else if (this.mazeGenerating) {
@@ -43,6 +53,14 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
       }
 
       client.emit('current-players', Array.from(this.players.values()));
+
+      if (this.players.size === 1) {
+        this.startMonsterUpdate();
+      }
+
+      const monsterState = this.monsterService.getMonsterState();
+      console.log('Sending initial monster state to client:', monsterState);
+      client.emit('monster-update', monsterState);
   }
 
   handleDisconnect(client: Socket){
@@ -54,8 +72,80 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
 
     if (this.players.size === 0) {
       this.maze = null;
+      this.stopMonsterUpdate();
     }
   }
+
+  private startMonsterUpdate() {
+    if (!this.monsterUpdateInterval) {
+      console.log('Starting monster update interval');
+      this.monsterUpdateInterval = setInterval(() => {
+        if (this.maze) {
+          this.monsterService.updateMonsterPosition(this.maze.walls, this.players, this.maze.grid);
+          const monsterState = this.monsterService.getMonsterState();
+          this.server.emit('monster-update', monsterState);
+        }
+      }, 50);
+    }
+  }
+
+  private stopMonsterUpdate() {
+    if (this.monsterUpdateInterval) {
+      clearInterval(this.monsterUpdateInterval);
+      this.monsterUpdateInterval = null;
+    }
+  }
+
+  private initializeMonsterPosition() {
+    if (!this.maze) return;
+    
+    const cellSize = this.maze.cellSize;
+    const cols = this.maze.cols;
+    const rows = this.maze.rows;
+    
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const rx = Math.floor(Math.random() * cols);
+      const ry = Math.floor(Math.random() * rows);
+      const x = rx * cellSize + cellSize / 2;
+      const y = ry * cellSize + cellSize / 2;
+      
+      const monsterWidth = 32;
+      const monsterHeight = 32;
+      const monsterRect = {
+        x: x - monsterWidth / 2,
+        y: y - monsterHeight / 2,
+        w: monsterWidth,
+        h: monsterHeight
+      };
+      
+      let collides = false;
+      for (const wall of this.maze.walls) {
+        if (this.checkCollision(monsterRect, wall)) {
+          collides = true;
+          break;
+        }
+      }
+      
+      if (!collides) {
+        this.monsterService.getMonsterState().x = x;
+        this.monsterService.getMonsterState().y = y;
+        console.log('Monster initialized at position:', x, y);
+        return;
+      }
+    }
+    
+    console.log('Could not find valid monster position, using default');
+  }
+
+  private checkCollision(rect1: { x: number; y: number; w: number; h: number },
+                        rect2: { x: number; y: number; w: number; h: number }): boolean {
+    return rect1.x < rect2.x + rect2.w &&
+           rect1.x + rect1.w > rect2.x &&
+           rect1.y < rect2.y + rect2.h &&
+           rect1.y + rect1.h > rect2.y;
+  }
+
+
 
   private generateMaze(width: number, height: number) {
     const cellSize = 64;
@@ -63,7 +153,6 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
     const rows = Math.floor(height / cellSize);
     const wallThickness = 6;
 
-    type Cell = { x: number; y: number; walls: { top: boolean; right: boolean; bottom: boolean; left: boolean }; visited: boolean };
     const grid: Cell[][] = [];
     for (let y = 0; y < rows; y++) {
       const row: Cell[] = [];
@@ -198,7 +287,7 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
       }
     }
 
-    return { cellSize, cols, rows, walls };
+    return { cellSize, cols, rows, walls, grid };
   }
 
   getUsersConnecteds(): Array<string>{
@@ -259,7 +348,6 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
 
     this.projectiles.set(projectileId, projectile);
 
-    // Simulate projectile movement and collision detection
     this.simulateProjectile(projectileId);
   }
 
@@ -285,10 +373,8 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
         break;
     }
 
-    // Check for collisions with players
     for (const [playerId, player] of this.players) {
       if (playerId !== projectile.owner) {
-        // Check if projectile is within player bounds (player sprite is roughly 32x32)
         const playerLeft = player.x - 16;
         const playerRight = player.x + 16;
         const playerTop = player.y - 16;
@@ -297,36 +383,29 @@ constructor(private readonly loggingService: UserLoginService, private readonly 
         if (newX >= playerLeft && newX <= playerRight && newY >= playerTop && newY <= playerBottom) {
           console.log(`Projectile ${projectileId} hit player ${playerId}`);
 
-          // Reduce player health
           player.health -= 20;
           if (player.health <= 0) {
             player.health = 0;
           }
 
-          // Remove projectile
           this.projectiles.delete(projectileId);
 
-          // Emit health update
           this.server.emit('player-hit', { playerId, health: player.health });
 
-          // Emit updated players list
           this.server.emit('current-players', Array.from(this.players.values()));
           return;
         }
       }
     }
 
-    // Update projectile position
     projectile.x = newX;
     projectile.y = newY;
 
-    // Check if projectile is out of bounds
     if (newX < -50 || newX > 850 || newY < -50 || newY > 650) {
       this.projectiles.delete(projectileId);
       return;
     }
 
-    // Continue simulation
     setTimeout(() => this.simulateProjectile(projectileId), 50);
   }
 }

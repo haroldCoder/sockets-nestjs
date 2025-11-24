@@ -7,12 +7,10 @@ import { AuthContainer } from '../auth-container'
 import { ApiClient } from '../../infrastructure/api-client'
 import authReducer from '../../../redux/authSlice'
 
-// Mock del ApiClient
 vi.mock('../../infrastructure/api-client')
 
 const mockApiClient = vi.mocked(ApiClient)
 
-// Mock de localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -24,7 +22,6 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
-// Crear store de prueba
 const createTestStore = (initialState = {}) => {
   return configureStore({
     reducer: {
@@ -43,7 +40,6 @@ const createTestStore = (initialState = {}) => {
   })
 }
 
-// Wrapper para proveer el store
 const renderWithProvider = (component: React.ReactElement, initialState = {}) => {
   const store = createTestStore(initialState)
   return {
@@ -59,7 +55,6 @@ describe('AuthContainer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     
-    // Mock de los métodos del ApiClient
     mockGetCurrentUser = vi.fn()
     mockLogout = vi.fn()
     
@@ -98,12 +93,10 @@ describe('AuthContainer', () => {
 
     const { store } = renderWithProvider(<AuthContainer />)
 
-    // Simular que la autenticación se inicializó correctamente
     await waitFor(() => {
       expect(mockGetCurrentUser).toHaveBeenCalled()
     })
 
-    // Verificar que el estado se actualizó correctamente
     const state = store.getState()
     expect(state.auth.isAuthenticated).toBe(true)
     expect(state.auth.user).toEqual(mockUser)
@@ -125,21 +118,16 @@ describe('AuthContainer', () => {
     const user = userEvent.setup()
     renderWithProvider(<AuthContainer />)
 
-    // Inicialmente debería mostrar el formulario de login
     expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
 
-    // Hacer clic en el enlace para cambiar a registro
     const switchToRegisterButton = screen.getByRole('button', { name: 'Regístrate aquí' })
     await user.click(switchToRegisterButton)
 
-    // Debería mostrar el formulario de registro
     expect(screen.getByRole('heading', { name: 'Registrarse' })).toBeInTheDocument()
 
-    // Hacer clic en el enlace para volver a login
     const switchToLoginButton = screen.getByRole('button', { name: 'Inicia sesión aquí' })
     await user.click(switchToLoginButton)
 
-    // Debería mostrar el formulario de login nuevamente
     expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
   })
 
@@ -167,13 +155,11 @@ describe('AuthContainer', () => {
 
     const { store } = renderWithProvider(<AuthContainer />, initialState)
 
-    // Verificar que se muestra la interfaz de usuario autenticado
     expect(screen.getByText('¡Bienvenido!')).toBeInTheDocument()
     
     const logoutButton = screen.getByRole('button', { name: 'Cerrar Sesión' })
     await user.click(logoutButton)
 
-    // Verificar que el estado se actualizó
     const state = store.getState()
     expect(state.auth.isAuthenticated).toBe(false)
     expect(state.auth.user).toBeNull()
@@ -191,7 +177,6 @@ describe('AuthContainer', () => {
       expect(mockGetCurrentUser).toHaveBeenCalled()
     })
 
-    // Debería mostrar el formulario de login como fallback
     expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument()
     
     consoleSpy.mockRestore()
@@ -207,7 +192,6 @@ describe('AuthContainer', () => {
       expect(mockGetCurrentUser).toHaveBeenCalled()
     })
 
-    // Debería inicializar como no autenticado
     const state = store.getState()
     expect(state.auth.isAuthenticated).toBe(false)
   })
@@ -224,7 +208,6 @@ describe('AuthContainer', () => {
       expect(mockGetCurrentUser).toHaveBeenCalled()
     })
 
-    // Debería inicializar como no autenticado
     const state = store.getState()
     expect(state.auth.isAuthenticated).toBe(false)
   })

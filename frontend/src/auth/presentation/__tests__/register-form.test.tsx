@@ -8,14 +8,12 @@ import { RegisterUseCase } from '../../application/register.use-case'
 import { ApiClient } from '../../infrastructure/api-client'
 import authReducer from '../../../redux/authSlice'
 
-// Mock de los casos de uso
 vi.mock('../../application/register.use-case')
 vi.mock('../../infrastructure/api-client')
 
 const mockRegisterUseCase = vi.mocked(RegisterUseCase)
 const mockApiClient = vi.mocked(ApiClient)
 
-// Crear store de prueba
 const createTestStore = () => {
   return configureStore({
     reducer: {
@@ -24,7 +22,6 @@ const createTestStore = () => {
   })
 }
 
-// Wrapper para proveer el store
 const renderWithProvider = (component: React.ReactElement) => {
   const store = createTestStore()
   return {
@@ -39,7 +36,6 @@ describe('RegisterForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     
-    // Mock del método execute del RegisterUseCase
     mockExecute = vi.fn()
     mockRegisterUseCase.mockImplementation(() => ({
       execute: mockExecute
@@ -97,7 +93,6 @@ describe('RegisterForm', () => {
       expect(screen.getByText('Las contraseñas no coinciden')).toBeInTheDocument()
     })
 
-    // Verificar que no se llamó al caso de uso
     expect(mockExecute).not.toHaveBeenCalled()
   })
 
@@ -212,7 +207,6 @@ describe('RegisterForm', () => {
     const confirmPasswordInput = screen.getByLabelText('Confirmar Contraseña:')
     const submitButton = screen.getByRole('button', { name: 'Registrarse' })
 
-    // Primero generar un error
     await user.type(usernameInput, 'testuser')
     await user.type(idInput, '123')
     await user.type(passwordInput, 'password123')
@@ -223,7 +217,6 @@ describe('RegisterForm', () => {
       expect(screen.getByText('Error inicial')).toBeInTheDocument()
     })
 
-    // Luego modificar un campo para limpiar el error
     await user.clear(usernameInput)
     await user.type(usernameInput, 'newuser')
 

@@ -25,6 +25,10 @@ export const initializeGame = (
           'https://labs.phaser.io/assets/sprites/phaser-dude.png',
         );
         this.load.image(
+          'monster',
+          'https://labs.phaser.io/assets/sprites/phaser-dude.png',
+        );
+        this.load.image(
           'fireball',
           'https://labs.phaser.io/assets/particles/red.png',
         );
@@ -254,6 +258,25 @@ export const initializeGame = (
           const healthBarFill = this.add.rectangle(px - 18, py - 25, (player.health / 100) * 36, 4, 0x00ff00).setName(`health-fill-${player.id}`);
           healthBarFill.setOrigin(0, 0.5);
         });
+
+        // Create monster sprite
+        const monsterSpawn = findSpawnForPlayer();
+        const monsterSprite = this.add.sprite(monsterSpawn.x, monsterSpawn.y, 'monster').setName('monster');
+        monsterSprite.setTint(0xff0000); // Red tint to differentiate from players
+        monsterSprite.setScale(1.2); // Slightly larger than players
+        console.log('Monster sprite created at:', monsterSpawn.x, monsterSpawn.y);
+
+        // Create monster health bars
+        const monsterHealthBarBg = this.add.rectangle(monsterSpawn.x, monsterSpawn.y - 30, 50, 6, 0x000000).setName('monster-health-bg');
+        monsterHealthBarBg.setStrokeStyle(2, 0xffffff);
+
+        const monsterHealthBarFill = this.add.rectangle(monsterSpawn.x - 23, monsterSpawn.y - 30, 46, 4, 0xff0000).setName('monster-health-fill');
+        monsterHealthBarFill.setOrigin(0, 0.5);
+
+        // Store references in scene data for easy access from other parts of the app
+        this.data.set('monsterSprite', monsterSprite);
+        this.data.set('monsterHealthBg', monsterHealthBarBg);
+        this.data.set('monsterHealthFill', monsterHealthBarFill);
       },
       init: function (this: Phaser.Scene) {
         let player: Phaser.GameObjects.Sprite;
@@ -271,7 +294,21 @@ export const initializeGame = (
             const pw = (player.displayWidth || (player.width || 32));
             const ph = (player.displayHeight || (player.height || 32));
             const rect = new Phaser.Geom.Rectangle(newX - pw / 2, newY - ph / 2, pw, ph);
-            return walls.some(w => Phaser.Geom.Intersects.RectangleToRectangle(rect, w));
+            
+            // Check wall collisions
+            if (walls.some(w => Phaser.Geom.Intersects.RectangleToRectangle(rect, w))) return true;
+
+            // Check monster collision
+            const monster = this.data.get('monsterSprite') as Phaser.GameObjects.Sprite | undefined;
+            if (monster) {
+                const mw = monster.displayWidth || monster.width || 32;
+                const mh = monster.displayHeight || monster.height || 32;
+                // Use a slightly smaller hitbox for the monster to allow getting close but not overlapping
+                const mRect = new Phaser.Geom.Rectangle(monster.x - mw / 2 + 5, monster.y - mh / 2 + 5, mw - 10, mh - 10);
+                if (Phaser.Geom.Intersects.RectangleToRectangle(rect, mRect)) return true;
+            }
+
+            return false;
           };
 
           switch (event.key) {
@@ -318,7 +355,6 @@ export const initializeGame = (
                 duration: 800,
                 onComplete: () => fireball.destroy(),
               });
-              // Emit fireball event to backend
               const socket = (window as any).socket;
               if (socket) {
                 socket.emit('fireball', { x: player.x, y: player.y, direction: 'left' });
@@ -336,7 +372,6 @@ export const initializeGame = (
                 duration: 800,
                 onComplete: () => fireball.destroy(),
               });
-              // Emit fireball event to backend
               const socket = (window as any).socket;
               if (socket) {
                 socket.emit('fireball', { x: player.x, y: player.y, direction: 'right' });

@@ -8,14 +8,12 @@ import { LoginUseCase } from '../../application/login.use-case'
 import { ApiClient } from '../../infrastructure/api-client'
 import authReducer from '../../../redux/authSlice'
 
-// Mock de los casos de uso
 vi.mock('../../application/login.use-case')
 vi.mock('../../infrastructure/api-client')
 
 const mockLoginUseCase = vi.mocked(LoginUseCase)
 const mockApiClient = vi.mocked(ApiClient)
 
-// Crear store de prueba
 const createTestStore = () => {
   return configureStore({
     reducer: {
@@ -24,7 +22,6 @@ const createTestStore = () => {
   })
 }
 
-// Wrapper para proveer el store
 const renderWithProvider = (component: React.ReactElement) => {
   const store = createTestStore()
   return {
@@ -39,7 +36,6 @@ describe('LoginForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     
-    // Mock del método execute del LoginUseCase
     mockExecute = vi.fn()
     mockLoginUseCase.mockImplementation(() => ({
       execute: mockExecute
@@ -165,7 +161,6 @@ describe('LoginForm', () => {
     const passwordInput = screen.getByLabelText('Contraseña:')
     const submitButton = screen.getByRole('button', { name: 'Iniciar Sesión' })
 
-    // Primero generar un error
     await user.type(usernameInput, 'testuser')
     await user.type(passwordInput, 'wrongpassword')
     await user.click(submitButton)
@@ -174,7 +169,6 @@ describe('LoginForm', () => {
       expect(screen.getByText('Error inicial')).toBeInTheDocument()
     })
 
-    // Luego modificar un campo para limpiar el error
     await user.clear(usernameInput)
     await user.type(usernameInput, 'newuser')
 
